@@ -5,6 +5,7 @@ let indice = 0;
 let correctas = 0;
 let nivel = "principiante";
 let tiempoLimite = 20000;
+let respuestasUsuario = [];
 
 async function comenzarTrivia() {
   nombre = document.getElementById("nombre").value;
@@ -16,19 +17,24 @@ async function comenzarTrivia() {
   const data = await res.json();
 
   preguntas = generarPreguntas(data).sort(() => 0.5 - Math.random()).slice(0, cantidad);
+  respuestasUsuario = [];
 
   document.getElementById("inicio").style.display = "none";
   document.getElementById("trivia").style.display = "block";
+  document.getElementById("final").style.display = "none";
   document.getElementById("saludo").innerText = `¡Vamos ${nombre}! Tema: ${tema}`;
+  indice = 0;
+  correctas = 0;
   mostrarPregunta();
 }
 
 function generarPreguntas(data) {
   return data.map(item => {
+    const nombre = item.nombre || item.descripcion || "este personaje";
     const respuesta = item.nacionalidad || item.origen || "argentino";
     const opciones = generarOpciones(respuesta);
     return {
-      pregunta: `¿De qué nacionalidad era ${item.descripcion || item.nombre}?`,
+      pregunta: `¿De qué nacionalidad era ${nombre}?`,
       opciones: opciones,
       respuesta: respuesta,
       pista: `Empieza con "${respuesta.slice(0, 3)}..."`
@@ -49,7 +55,7 @@ function generarOpciones(correcta) {
 function mostrarPregunta() {
   const p = preguntas[indice];
   const cont = document.getElementById("pregunta-container");
-  cont.innerHTML = `<h3>${p.pregunta}</h3>`;
+  cont.innerHTML = `<h3>Pregunta ${indice + 1} de ${cantidad}</h3><p>${p.pregunta}</p>`;
 
   if (nivel === "principiante") {
     cont.innerHTML += p.opciones.map(op => `<button onclick="responder('${op}')">${op}</button>`).join("");
@@ -60,19 +66,12 @@ function mostrarPregunta() {
       <p class="pista">Pista: ${p.pista}</p>
     `;
   }
-
-  setTimeout(() => {
-    if (indice < preguntas.length) {
-      indice++;
-      mostrarPregunta();
-    } else {
-      mostrarFinal();
-    }
-  }, tiempoLimite);
 }
 
 function responder(opcion) {
-  if (opcion === preguntas[indice].respuesta) correctas++;
+  const correcta = preguntas[indice].respuesta;
+  respuestasUsuario.push({ pregunta: preguntas[indice].pregunta, respuestaCorrecta: correcta, respuestaUsuario: opcion });
+  if (opcion === correcta) correctas++;
   indice++;
   if (indice < preguntas.length) {
     mostrarPregunta();
@@ -84,6 +83,7 @@ function responder(opcion) {
 function responderManual() {
   const respuesta = document.getElementById("respuesta").value.trim().toLowerCase();
   const correcta = preguntas[indice].respuesta.toLowerCase();
+  respuestasUsuario.push({ pregunta: preguntas[indice].pregunta, respuestaCorrecta: preguntas[indice].respuesta, respuestaUsuario: respuesta });
   if (respuesta === correcta) correctas++;
   indice++;
   if (indice < preguntas.length) {
@@ -96,8 +96,24 @@ function responderManual() {
 function mostrarFinal() {
   document.getElementById("trivia").style.display = "none";
   document.getElementById("final").style.display = "block";
-  document.getElementById("resultado").innerText = `${nombre}, acertaste ${correctas} de ${cantidad} preguntas.`;
+
+  let resultado = `<strong>${nombre}, acertaste ${correctas} de ${cantidad} preguntas.</strong><br><br>`;
+  resultado += `<ul>`;
+  respuestasUsuario.forEach((r, i) => {
+    const esCorrecta = r.respuestaUsuario.toLowerCase() === r.respuestaCorrecta.toLowerCase();
+    resultado += `<li><strong>Pregunta ${i + 1}:</strong> ${r.pregunta}<br>
+    Tu respuesta: <em>${r.respuestaUsuario}</em> ${esCorrecta ? "✅" : "❌"}<br>
+    Respuesta correcta: <strong>${r.respuestaCorrecta}</strong></li><br>`;
+  });
+  resultado += `</ul>`;
+  document.getElementById("resultado").innerHTML = resultado;
   lanzarConfeti();
+}
+
+function volverInicio() {
+  document.getElementById("inicio").style.display = "block";
+  document.getElementById("trivia").style.display = "none";
+  document.getElementById("final").style.display = "none";
 }
 
 function lanzarConfeti() {
