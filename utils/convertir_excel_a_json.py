@@ -17,3 +17,4 @@ def convertir(nombre_archivo):
 
 # Ejecutar
 convertir("Compositores")
+convertir("Cantantes")
