@@ -1,149 +1,153 @@
-// Variables globales
-let preguntas = [];
-let respuestasUsuario = [];
-let nombre = "";
-let cantidad = 0;
-let indice = 0;
-let correctas = 0;
-let nivel = "principiante";
+// ======================= VARIABLES =======================
+let questions = [];
+let userAnswers = [];
+let currentIndex = 0;
+let correctCount = 0;
+let playerName = "";
+let questionCount = 0;
+let level = "principiante";
 
-// Configuración
-const tiempoLimite = 20000;
-const signosZodiacales = [
+// ======================= CONFIGURACIÓN =======================
+const zodiacSigns = [
   "Aries", "Tauro", "Géminis", "Cáncer", "Leo", "Virgo",
   "Libra", "Escorpio", "Sagitario", "Capricornio", "Acuario", "Piscis"
 ];
 
-// Inicio del juego
-async function comenzarTrivia() {
-  nombre = document.getElementById("nombre").value.trim();
-  const tema = document.getElementById("tema").value;
-  cantidad = parseInt(document.getElementById("cantidad").value);
-  nivel = document.getElementById("nivel").value;
+// ======================= INICIO =======================
+document.querySelector("button[onclick='comenzarTrivia()']").addEventListener("click", comenzarTrivia);
 
-  const res = await fetch(`data/${tema}.json`);
+async function comenzarTrivia() {
+  playerName = document.getElementById("nombre").value.trim();
+  const topic = document.getElementById("tema").value;
+  questionCount = parseInt(document.getElementById("cantidad").value);
+  level = document.getElementById("nivel").value;
+
+  const res = await fetch(`data/${topic}.json`);
   const data = await res.json();
 
-  preguntas = generarPreguntas(data).sort(() => 0.5 - Math.random()).slice(0, cantidad);
-  respuestasUsuario = [];
-  indice = 0;
-  correctas = 0;
+  questions = buildQuestions(data);
+  questions = shuffleArray(questions).slice(0, questionCount);
+  userAnswers = [];
+  currentIndex = 0;
+  correctCount = 0;
 
-  document.getElementById("inicio").style.display = "none";
-  document.getElementById("trivia").style.display = "block";
-  document.getElementById("final").style.display = "none";
-  document.getElementById("saludo").innerText = `¡Vamos ${nombre}! Tema: ${tema}`;
-
-  mostrarPregunta();
+  showSection("trivia");
+  document.getElementById("saludo").textContent = `¡Vamos ${playerName}! Tema: ${topic}`;
+  renderQuestion();
 }
 
-// Generar preguntas desde JSON
-function generarPreguntas(data) {
+// ======================= CONSTRUCCIÓN DE PREGUNTAS =======================
+function buildQuestions(data) {
   return data.map(item => {
-    const nombre = item.nombre?.trim() || "este personaje";
-    const fecha = item.fecha_nacimiento?.toString().trim() || "una fecha desconocida";
-    const respuesta = item.signo?.trim() || "Capricornio";
-    const opciones = generarOpciones(respuesta);
+    const name = item.nombre?.trim() || "este personaje";
+    const birth = item.fecha_nacimiento?.toString().trim() || "una fecha desconocida";
+    const answer = item.signo?.trim() || "Capricornio";
+    const options = generateOptions(answer);
     return {
-      pregunta: `¿Qué signo zodiacal tenía ${nombre}, nacido en ${fecha}?`,
-      opciones,
-      respuesta,
-      pista: `Empieza con "${respuesta.slice(0, 3)}..."`
+      text: `¿Qué signo zodiacal tenía ${name}, nacido en ${birth}?`,
+      answer,
+      options,
+      hint: `Empieza con "${answer.slice(0, 3)}..."`
     };
   });
 }
 
-// Generar opciones aleatorias
-function generarOpciones(correcta) {
-  const opciones = [correcta];
-  while (opciones.length < 4) {
-    const op = signosZodiacales[Math.floor(Math.random() * signosZodiacales.length)];
-    if (!opciones.includes(op)) opciones.push(op);
+function generateOptions(correct) {
+  const options = [correct];
+  while (options.length < 4) {
+    const random = zodiacSigns[Math.floor(Math.random() * zodiacSigns.length)];
+    if (!options.includes(random)) options.push(random);
   }
-  return opciones.sort(() => 0.5 - Math.random());
+  return shuffleArray(options);
 }
 
-// Mostrar pregunta actual
-function mostrarPregunta() {
-  const p = preguntas[indice];
-  const cont = document.getElementById("pregunta-container");
-  cont.innerHTML = `<h3>Pregunta ${indice + 1} de ${cantidad}</h3><p>${p.pregunta}</p>`;
+// ======================= RENDER DE PREGUNTA =======================
+function renderQuestion() {
+  const q = questions[currentIndex];
+  const container = document.getElementById("pregunta-container");
+  container.innerHTML = `<h3>Pregunta ${currentIndex + 1} de ${questionCount}</h3><p>${q.text}</p>`;
 
-  if (nivel === "principiante") {
-    cont.innerHTML += p.opciones.map(op => `<button onclick="responder('${op}')">${op}</button>`).join("");
+  if (level === "principiante") {
+    q.options.forEach(option => {
+      const btn = document.createElement("button");
+      btn.textContent = option;
+      btn.onclick = () => handleAnswer(option);
+      container.appendChild(btn);
+    });
   } else {
-    cont.innerHTML += `
+    container.innerHTML += `
       <input type="text" id="respuesta" placeholder="Escribí tu respuesta">
-      <button onclick="responderManual()">Responder</button>
-      <p class="pista">Pista: ${p.pista}</p>
+      <button onclick="handleWrittenAnswer()">Responder</button>
+      <p class="pista">${q.hint}</p>
     `;
   }
 }
 
-// Validar respuesta (principiante)
-function responder(opcion) {
-  registrarRespuesta(opcion);
-  avanzar();
+// ======================= VALIDACIÓN DE RESPUESTA =======================
+function handleAnswer(selected) {
+  registerAnswer(selected);
+  nextQuestion();
 }
 
-// Validar respuesta (avanzado)
-function responderManual() {
-  const respuesta = document.getElementById("respuesta").value.trim();
-  registrarRespuesta(respuesta);
-  avanzar();
+function handleWrittenAnswer() {
+  const input = document.getElementById("respuesta").value.trim();
+  registerAnswer(input);
+  nextQuestion();
 }
 
-// Registrar respuesta y verificar
-function registrarRespuesta(respuestaUsuario) {
-  const correcta = preguntas[indice].respuesta;
-  const esCorrecta = respuestaUsuario.toLowerCase() === correcta.toLowerCase();
-  if (esCorrecta) correctas++;
-  respuestasUsuario.push({
-    pregunta: preguntas[indice].pregunta,
-    respuestaCorrecta: correcta,
-    respuestaUsuario,
-    esCorrecta
+function registerAnswer(userInput) {
+  const correct = questions[currentIndex].answer;
+  const isCorrect = userInput.toLowerCase() === correct.toLowerCase();
+  if (isCorrect) correctCount++;
+  userAnswers.push({
+    question: questions[currentIndex].text,
+    correct,
+    user: userInput,
+    isCorrect
   });
 }
 
-// Avanzar a la siguiente pregunta o finalizar
-function avanzar() {
-  indice++;
-  if (indice < preguntas.length) {
-    mostrarPregunta();
+function nextQuestion() {
+  currentIndex++;
+  if (currentIndex < questions.length) {
+    renderQuestion();
   } else {
-    mostrarFinal();
+    showResults();
   }
 }
 
-// Mostrar resultado final
-function mostrarFinal() {
-  document.getElementById("trivia").style.display = "none";
-  document.getElementById("final").style.display = "block";
-
-  let resultado = `<strong>${nombre}, acertaste ${correctas} de ${cantidad} preguntas.</strong><br><br><ul>`;
-  respuestasUsuario.forEach((r, i) => {
-    resultado += `<li><strong>Pregunta ${i + 1}:</strong> ${r.pregunta}<br>
-    Tu respuesta: <em>${r.respuestaUsuario}</em> ${r.esCorrecta ? "✅" : "❌"}<br>
-    Respuesta correcta: <strong>${r.respuestaCorrecta}</strong></li><br>`;
+// ======================= RESULTADOS =======================
+function showResults() {
+  showSection("final");
+  const result = document.getElementById("resultado");
+  result.innerHTML = `<strong>${playerName}, acertaste ${correctCount} de ${questionCount} preguntas.</strong><br><br><ul>`;
+  userAnswers.forEach((r, i) => {
+    result.innerHTML += `<li><strong>Pregunta ${i + 1}:</strong> ${r.question}<br>
+    Tu respuesta: <em>${r.user}</em> ${r.isCorrect ? "✅" : "❌"}<br>
+    Respuesta correcta: <strong>${r.correct}</strong></li><br>`;
   });
-  resultado += `</ul>`;
-  document.getElementById("resultado").innerHTML = resultado;
-
+  result.innerHTML += `</ul>`;
   lanzarConfeti();
 }
 
-// Volver al inicio
-function volverInicio() {
-  document.getElementById("inicio").style.display = "block";
-  document.getElementById("trivia").style.display = "none";
-  document.getElementById("final").style.display = "none";
+// ======================= UTILIDADES =======================
+function shuffleArray(array) {
+  return array.sort(() => Math.random() - 0.5);
 }
 
-// Celebración final
+function showSection(id) {
+  document.getElementById("inicio").style.display = "none";
+  document.getElementById("trivia").style.display = "none";
+  document.getElementById("final").style.display = "none";
+  document.getElementById(id).style.display = "block";
+}
+
+function volverInicio() {
+  showSection("inicio");
+}
+
 function lanzarConfeti() {
   import('https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.module.mjs').then(({default: confetti}) => {
     confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
   });
 }
-
