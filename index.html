@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Trivia Argentina</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="inicio">
+    <h1>🎓 Trivia Argentina</h1>
+
+    <label>Tu nombre:</label>
+    <input type="text" id="nombre">
+
+    <label>Seleccioná el tema:</label>
+    <select id="tema">
+      <option value="compositores">Compositores</option>
+      <option value="cantantes">Cantantes</option>
+    </select>
+
+    <label>Cantidad de preguntas:</label>
+    <input type="number" id="cantidad" min="1" max="20">
+
+    <label>Nivel:</label>
+    <select id="nivel">
+      <option value="principiante">Principiante</option>
+      <option value="avanzado">Avanzado</option>
+    </select>
+
+    <button onclick="comenzarTrivia()">Comenzar</button>
+  </div>
+
+  <div id="trivia" style="display:none;">
+    <h2 id="saludo"></h2>
+    <div id="pregunta-container"></div>
+  </div>
+
+  <div id="final" style="display:none;">
+    <h2>¡Felicitaciones!</h2>
+    <p id="resultado"></p>
+    <canvas id="confeti"></canvas>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
