@@ -31,7 +31,7 @@ async function comenzarTrivia() {
   const res = await fetch(`data/${tema}.json`);
   const data = await res.json();
 
-  preguntas = generarPreguntasAleatorias(data).slice(0, cantidad);
+  preguntas = generarPreguntas(data).slice(0, cantidad);
   respuestasUsuario = [];
   indice = 0;
   correctas = 0;
@@ -44,9 +44,10 @@ async function comenzarTrivia() {
   mostrarPregunta();
 }
 
-function generarPreguntasAleatorias(data) {
+function generarPreguntas(data) {
   return data.map(item => {
     const claves = Object.keys(campos).filter(c => item[c]);
+    if (claves.length === 0) return null;
     const clave = claves[Math.floor(Math.random() * claves.length)];
     const [plantilla, campoRespuesta] = campos[clave];
     const pregunta = plantilla
@@ -60,7 +61,7 @@ function generarPreguntasAleatorias(data) {
       opciones,
       pista: `Empieza con "${respuesta.slice(0, 3)}..."`,
     };
-  }).sort(() => 0.5 - Math.random());
+  }).filter(p => p !== null).sort(() => 0.5 - Math.random());
 }
 
 function generarOpciones(campo, correcta) {
@@ -89,7 +90,7 @@ function mostrarPregunta() {
     cont.innerHTML += `
       <input type="text" id="respuesta" placeholder="Escribí tu respuesta">
       <button onclick="responderManual()">Responder</button>
-      <p class="pista">Pista: ${p.pista}</p>
+      <p class="pista">${p.pista}</p>
     `;
   }
 }
@@ -142,13 +143,4 @@ function mostrarFinal() {
 }
 
 function volverInicio() {
-  document.getElementById("inicio").style.display = "block";
-  document.getElementById("trivia").style.display = "none";
-  document.getElementById("final").style.display = "none";
-}
-
-function lanzarConfeti() {
-  import('https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.module.mjs').then(({default: confetti}) => {
-    confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
-  });
-}
+  document.getElementById("inicio").style.display = "
